@@ -1,5 +1,5 @@
-# PIXL
+# Sidequest
 
-Project workspace for participation in [PIXL](https://pixl.hackclub.com/).
+An experimental workspace for building small, useful projects.
 
 Project idea and build instructions will be added when development starts.
