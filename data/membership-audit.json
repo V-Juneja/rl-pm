@@ -1,0 +1,16 @@
+{
+  "source_sha256": "36326709d46d6cd25834de5df457b16f5f96fad3a06b9beac28f7b88aa0b0d54",
+  "snapshots": 2720,
+  "first_date": "1996-01-02",
+  "last_date": "2026-08-18",
+  "unique_tickers": 1209,
+  "min_members": 487,
+  "max_members": 507,
+  "status": "UNVERIFIED_MEMBERSHIP_ONLY",
+  "missing": [
+    "stable security identifiers",
+    "delisted total returns",
+    "independent membership verification",
+    "availability timestamps"
+  ]
+}

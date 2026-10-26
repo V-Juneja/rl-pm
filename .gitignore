@@ -7,3 +7,5 @@ dist/
 .venv/
 __pycache__/
 *.log
+data/raw/
+*.egg-info/
