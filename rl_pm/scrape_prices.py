@@ -109,14 +109,24 @@ def run(delay, retry):
     if journal.exists() and not retry:
         for line in journal.read_text().splitlines():
             try:
-                done.add(json.loads(line)['ticker'])
+                record = json.loads(line)
+                if record.get('status') in {'candidate_scraped', 'date_mismatch', 'not_found', 'robots_disallowed'}:
+                    done.add(record['ticker'])
             except (ValueError, KeyError):
                 continue
     robots = RobotFileParser()
     try:
         robots.parse(get_text(HOST + '/robots.txt').splitlines())
-    except (HTTPError, URLError, TimeoutError):
-        raise SystemExit('Could not check source access rules; no pages requested.')
+    except HTTPError as error:
+        if error.code == 429:
+            retry_after = error.headers.get('Retry-After', 'not supplied')
+            raise SystemExit(
+                f'Stock Analysis rate limit (HTTP 429). Retry-After: {retry_after}.\n'
+                'No price pages requested. Stop requests and retry later; saved progress is retained.'
+            )
+        raise SystemExit(f'Access rules request failed: HTTP {error.code}. No price pages requested.')
+    except (URLError, TimeoutError) as error:
+        raise SystemExit(f'Access rules request failed: {type(error).__name__}. No price pages requested.')
     jobs = sorted(set(grouped) - done)
     print(f'{len(jobs):,} historical tickers queued; no ticker-count cap', flush=True)
     counts = Counter()
@@ -165,7 +175,7 @@ def run(delay, retry):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--delay', type=float, default=2)
+    parser.add_argument('--delay', type=float, default=10)
     parser.add_argument('--retry', action='store_true')
     args = parser.parse_args()
     if not math.isfinite(args.delay) or args.delay < 1:
