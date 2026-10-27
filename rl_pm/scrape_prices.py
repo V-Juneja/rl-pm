@@ -1,6 +1,7 @@
 import argparse
 from collections import Counter
 import csv
+import fcntl
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 import json
@@ -9,10 +10,10 @@ from pathlib import Path
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
-from urllib.request import Request, urlopen
 from urllib.robotparser import RobotFileParser
 
 from .recovery import ROOT, FIELDS, assess, target_windows
+from .http_client import get_text as request_text
 
 
 AGENT = 'RLPMResearch/1.0'
@@ -93,10 +94,7 @@ def parse_history(html):
 
 
 def get_text(url):
-    request = Request(url, headers={'User-Agent': AGENT})
-    with urlopen(request, timeout=30) as response:
-        return response.read().decode('utf-8', errors='replace')
-
+    return request_text(url, AGENT)
 
 def run(delay, retry):
     output = ROOT / 'data/scraped/stockanalysis'
@@ -180,7 +178,17 @@ def main():
     args = parser.parse_args()
     if not math.isfinite(args.delay) or args.delay < 1:
         parser.error('--delay must be at least 1 second')
-    run(args.delay, args.retry)
+    lock_path = ROOT / 'data/scraped/stockanalysis/run.lock'
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open('a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            parser.exit(1, 'A scraper is already running.\n')
+        try:
+            run(args.delay, args.retry)
+        except KeyboardInterrupt:
+            print('\nStopped; progress saved.', flush=True)
 
 
 if __name__ == '__main__':
