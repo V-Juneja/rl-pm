@@ -1,1 +1,0 @@
-"""Sidequest portfolio research engine."""

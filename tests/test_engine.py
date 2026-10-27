@@ -1,5 +1,5 @@
 import unittest
-from sidequest.engine import rebalance, equal_weight
+from rl_pm.engine import rebalance, equal_weight
 
 
 class AccountingTests(unittest.TestCase):

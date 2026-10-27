@@ -10,4 +10,4 @@ with urlopen(URL, timeout=60) as response:
 if not payload.startswith(b'date,tickers'):
     raise ValueError('Unexpected source schema')
 path.write_bytes(payload)
-print(f'Downloaded {len(payload):,} bytes to {path}; run python3 -m sidequest.audit')
+print(f'Downloaded {len(payload):,} bytes to {path}; run python3 -m rl_pm.audit')

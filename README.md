@@ -1,4 +1,4 @@
-# Sidequest
+# rl-pm
 
 An experimental RL portfolio research engine for selectively holding, excluding,
 and re-entering historical S&P 500 constituents.
@@ -13,9 +13,9 @@ Python 3.10+; standard library only for the initial prototype.
 
 ```sh
 python3 -m unittest discover -s tests -v
-python3 -m sidequest.demo
+python3 -m rl_pm.demo
 python3 scripts/fetch_membership.py
-python3 -m sidequest.audit
+python3 -m rl_pm.audit
 ```
 
 The demo uses generated returns, not market data. Its results cannot demonstrate
