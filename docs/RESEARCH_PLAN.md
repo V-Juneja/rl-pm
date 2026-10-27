@@ -49,7 +49,8 @@ Chronological train/validation/test windows; purge overlapping feature/label win
 Fit preprocessing only on training. Select on validation, freeze final test once.
 Run multiple seeds and rolling walk-forward windows. Report fees/slippage sensitivity,
 turnover, exposure, concentration, drawdown and uncertainty, not just best returns.
-The existing tabular Q demo is synthetic and deliberately tiny; it is not the full agent.
+The preliminary generated-data demonstration has been removed. No RL agent is
+currently implemented; training will use validated market data.
 
 ## Delivery milestones and PIXL
 1. Data ingestion, provenance, coverage checks and identifier mapping.
@@ -62,3 +63,27 @@ T4 only if delivered architecture and depth warrant it; model terminology alone 
 https://pixl.hackclub.com/docs/energy
 No trial required: own idea. Project remains unregistered until its actual data and
 submission fields can be completed accurately. No hours or journal claims created.
+
+## Delisted-company data route (revised)
+Sharadar Prices is the preferred Mac-compatible API candidate to evaluate:
+- stocks: active and delisted OHLCV, history to December 1997.
+- tickers: permanent identifiers, related tickers, delisted flags and coverage dates.
+- actions: ticker changes, mergers, dividends and delisting reasons, from 1998.
+- sp500: historical membership events/effective dates and quarterly snapshots from 1998.
+Sources: https://sharadar.com/docs/stocks , https://sharadar.com/docs/tickers ,
+https://sharadar.com/docs/actions , https://sharadar.com/docs/sp500 .
+
+Requires a paid subscription/API key; access has not been obtained. This is a
+procurement and integration route, not a claim that coverage is already resolved.
+Use January 1998 onward as a candidate common start, subject to per-security audit;
+keep the free 1996 membership file for cross-checks rather than invent missing prices.
+Download all four tables with years=full using documented authenticated bulk access.
+Join identifiers and action history before matching historical membership symbols.
+Verify terminal settlement proceeds separately: a delisting reason does not establish
+an investor's final return. Missing proceeds need source-backed reconciliation,
+including filings where necessary. Never assume every delisting is a 100% loss.
+Audit membership-to-price coverage and fail training for unresolved held exposures.
+No synthetic price fill, no survivor-only fallback and no model results until validated.
+If paid access is unavailable, label the Yahoo panel incomplete and block broad
+survivorship-free claims; its missing histories cannot be repaired by downloading
+current ticker names again. Confirm data display and redistribution rights for SaaS.
