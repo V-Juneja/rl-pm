@@ -1,28 +1,12 @@
-"""Audit observed membership/price coverage; does not certify identifiers or payouts."""
 import argparse
 from bisect import bisect_right
 import csv
 from datetime import date
 import json
-import math
 from pathlib import Path
 from urllib.parse import quote
 
-
-def valid_dates(path):
-    """Accept only complete, positive adjusted-close observations."""
-    dates, invalid = set(), 0
-    with path.open() as stream:
-        for row in csv.DictReader(stream):
-            try:
-                day = date.fromisoformat(row['date'])
-                value = float(row['adjusted_close'])
-                if not math.isfinite(value) or value <= 0 or day in dates:
-                    raise ValueError('Invalid or duplicate observation')
-                dates.add(day)
-            except (ValueError, KeyError, TypeError):
-                invalid += 1
-    return dates, invalid
+from .prices import valid_dates
 
 
 def audit(root, start, end):
@@ -55,20 +39,17 @@ def audit(root, start, end):
                             first_missing=str(missing[0]) if missing else None,
                             invalid_rows=invalid))
     missing = sum(r['missing_sessions'] for r in details)
-    return dict(status='BLOCKED_PENDING_DATA_VALIDATION', start=str(sessions[0]),
+    return dict(identity_status='unchecked', settlement_status='unchecked',
+                calendar_source='SPY', status='incomplete' if missing else 'coverage_complete', start=str(sessions[0]),
                 end=str(sessions[-1]), sessions=len(sessions), securities=len(details),
                 absent_files=sum(not r['file_exists'] for r in details),
                 required_asset_sessions=sum(len(v) for v in required.values()),
                 missing_asset_sessions=missing,
-                warnings=['Ticker identity, terminal payouts and corporate actions remain unverified.',
-                          'SPY dates are a provisional calendar; source gaps are not exchange holidays.',
-                          'Membership snapshots are carried forward; last snapshot may be stale.',
-                          'A missing observation may represent a halt, identity mismatch or download gap.'],
                 membership_last_snapshot=str(boundaries[-1]), details=details)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description='Check historical price coverage')
     parser.add_argument('--start', type=date.fromisoformat, default=date(1998, 1, 1))
     parser.add_argument('--end', type=date.fromisoformat, required=True)
     parser.add_argument('--root', type=Path, default=Path('data/raw'))
