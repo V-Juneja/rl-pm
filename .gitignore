@@ -8,4 +8,12 @@ dist/
 __pycache__/
 *.log
 data/raw/
+data/tiingo/
+data/raw/combined/
+data/external/
+data/recovery/
+data/scraped/
+data/download-log.txt
+data/coverage-report.json
+outputs/
 *.egg-info/

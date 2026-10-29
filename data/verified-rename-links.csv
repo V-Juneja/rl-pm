@@ -1,0 +1,7 @@
+historical_ticker,later_ticker,effective_date,source
+CDAY,DAY,2024-02-01,https://www.sec.gov/Archives/edgar/data/1725057/000095017024022100/day-20231231.htm
+PEAK,DOC,2024-03-04,https://www.sec.gov/Archives/edgar/data/765880/000110465924029661/tm247564d1_8k.htm
+RE,EG,2023-07-10,https://investors.everestglobal.com/news/news-details/2023/Everest-to-Rebrand-Company-Name-and-NYSE-Ticker-to-Reflect-its-Evolution-Global-Growth-and-Diversification-Strategy/default.aspx
+EQR,VMRK,2026-08-18,https://www.sec.gov/Archives/edgar/data/906107/000114036126033377/ef20080318_ex99-1.htm
+SATS,ECHO,2026-06-24,https://echostar.gcs-web.com/news-releases/news-release-details/echostar-changing-stocker-ticker-sats-echo-marking-companys-next
+PSKY,SKYD,2026-10-06,https://www.sec.gov/Archives/edgar/data/2041610/000110465926113076/tm2626659d3_8k.htm
