@@ -12,6 +12,8 @@ import torch
 from torch import nn
 from torch.distributions import Dirichlet
 
+from .cross_sectional import augment_features, extra_feature_count
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -200,10 +202,16 @@ class Normalizer:
         if len(sample) < 2:
             raise ValueError("Insufficient training features")
 
-        return cls(
-            sample.mean(axis=0),
-            np.maximum(sample.std(axis=0), 0.000001),
-        )
+        mean = sample.mean(axis=0)
+        scale = np.maximum(sample.std(axis=0), 0.000001)
+        added = extra_feature_count(values.shape[-1])
+        if added:
+            mean = np.concatenate([mean, np.full(added, 0.5)])
+            scale = np.concatenate([
+                scale,
+                np.full(added, 1 / np.sqrt(12)),
+            ])
+        return cls(mean, scale)
 
     def transform(self, values):
         return np.clip(
@@ -243,7 +251,9 @@ class Portfolio:
             )
 
         relevant = active | held
-        values = self.market.features[t].copy()
+        values = augment_features(
+            self.market.features[t], active, held,
+        ).copy()
 
         if not np.isfinite(values[relevant]).all():
             raise ValueError(
@@ -674,7 +684,10 @@ def save_checkpoint(path, model, normalizer, market, config, splits):
         "dataset_sha256": market.digest,
         "splits": splits,
         "research_assumptions": market.metadata.get("research_assumptions"),
-        "model_architecture": getattr(market, "model_architecture", "dirichlet-v1"),
+        "model_architecture": (
+            getattr(market, "model_architecture", "dirichlet-v1")
+            + "+cross-sectional-ranks-v1"
+        ),
     }, temporary)
 
     temporary.replace(path)
@@ -720,7 +733,9 @@ def train(args, market):
 
     normalizer = Normalizer.fit(market, training)
     model = getattr(market, "model_class", ActorCritic)(
-        market.features.shape[-1] + 3,
+        market.features.shape[-1]
+        + extra_feature_count(market.features.shape[-1])
+        + 3,
         config.hidden,
     )
     optimizer = torch.optim.Adam(
@@ -740,7 +755,10 @@ def train(args, market):
         "config": asdict(config),
         "splits": splits,
         "research_assumptions": market.metadata.get("research_assumptions"),
-        "model_architecture": getattr(market, "model_architecture", "dirichlet-v1"),
+        "model_architecture": (
+            getattr(market, "model_architecture", "dirichlet-v1")
+            + "+cross-sectional-ranks-v1"
+        ),
     })
 
     best_score = -float("inf")
@@ -853,7 +871,9 @@ def test(args, market):
         checkpoint["scale"],
     )
     model = getattr(market, "model_class", ActorCritic)(
-        market.features.shape[-1] + 3,
+        market.features.shape[-1]
+        + extra_feature_count(market.features.shape[-1])
+        + 3,
         config.hidden,
     )
     model.load_state_dict(checkpoint["model"])

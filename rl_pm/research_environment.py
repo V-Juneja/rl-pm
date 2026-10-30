@@ -2,6 +2,7 @@ import numpy as np
 import torch
 
 from .train import Portfolio
+from .cross_sectional import augment_features
 
 
 class ResearchPortfolio(Portfolio):
@@ -10,7 +11,9 @@ class ResearchPortfolio(Portfolio):
         active = self.market.eligible[t]
         held = self.weights > 0
         relevant = active | held
-        values = self.market.features[t].copy()
+        values = augment_features(
+            self.market.features[t], active, held,
+        ).copy()
         if not np.isfinite(values[relevant]).all():
             raise ValueError("Nonfinite research features")
         values[~relevant] = self.normalizer.mean

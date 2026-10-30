@@ -51,6 +51,11 @@ downside volatility, moving-average distances, drawdown, and availability masks.
 Features use current and past observations. Features calculated after a close
 must be aligned to a later execution boundary by the dataset builder.
 
+The research policy also receives same-date cross-sectional ranks for 21-,
+63-, and 252-session momentum and 21-session total and downside volatility.
+Ranks are calculated only among securities eligible on that date plus positions
+already held. Missing signals receive a neutral rank.
+
 ```sh
 .venv/bin/python -m rl_pm.features --tickers AAPL MSFT AMZN
 ```
@@ -161,6 +166,28 @@ saved with the dataset, checkpoints and run metadata; the verified-data trainer
 keeps its existing checks. The cash policy uses a separate Beta allocation so
 cash exposure does not vanish as the stock universe grows. Model selection
 uses validation years; the final test period requires a separate command.
+
+### Optional point-in-time news inputs
+
+The research loader accepts `news-events.csv` and `news-coverage.csv` inside the
+research data directory when both are present. The event file requires
+`security_id,source,article_id,published_at,available_at,sentiment`. Timestamps
+must include a timezone; sentiment must be in `[-1, 1]`. `available_at` records
+when the dated source made the item available and is used alongside
+`published_at` to prevent future information from entering an observation. The
+coverage file requires `security_id,start_date,end_date,source` and declares
+when a source has complete coverage for that security. Use the stable
+`security_id` values in `security_ids.npy`, not a current ticker lookup.
+
+The loader creates rolling article counts and sentiment means over 7 and 30
+days, plus a coverage flag. For the row at session t, only items available by
+the previous session's 4 p.m. New York close are visible. No news source is
+currently in this project’s dataset, so the present training run does not use
+news. GDELT 2.0's historical archive starts in February 2015, so it cannot
+provide news coverage for the full 1996 backtest; its DOC search API is a recent
+search service, not a full-history feed. A source with only partial capture
+should not claim complete coverage. See the [GDELT archive overview](https://blog.gdeltproject.org/gdelt-2-0-our-global-world-in-realtime/)
+and [DOC API time range](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/).
 
 Python 3.10+; standard library only for the initial prototype.
 

@@ -189,10 +189,29 @@ def load_market(path):
                     raise ValueError(f"Research artifact changed: {name}")
             if digest(path / "events.csv") != self.metadata["events_sha256"]:
                 raise ValueError("Research event ledger changed")
-            self.digest = hashlib.sha256((path / "manifest.json").read_bytes()).hexdigest()
+            digest_parts = [(path / "manifest.json").read_bytes()]
+            news_events = path / "news-events.csv"
+            news_coverage = path / "news-coverage.csv"
+            if news_events.exists() != news_coverage.exists():
+                raise ValueError("Provide both news-events.csv and news-coverage.csv")
+            self.model_architecture = "beta-cash-dirichlet-stocks-v1"
             self.dates = np.load(staging / "dates.npy")
             self.ids = np.load(staging / "security_ids.npy")
             self.features = np.load(staging / "features.npy", mmap_mode="r")
+            if news_events.exists():
+                from .news_features import NEWS_FEATURE_NAMES, build_news_features
+
+                for news_path in (news_events, news_coverage):
+                    digest_parts.append(digest(news_path).encode())
+                news = build_news_features(
+                    news_events, news_coverage, self.dates, self.ids,
+                )
+                self.features = np.concatenate([self.features, news], axis=-1)
+                self.model_architecture += "+dated-news-v1"
+                self.metadata["news_feature_names"] = list(NEWS_FEATURE_NAMES)
+                self.metadata["news_events_sha256"] = digest(news_events)
+                self.metadata["news_coverage_sha256"] = digest(news_coverage)
+            self.digest = hashlib.sha256(b"".join(digest_parts)).hexdigest()
             for name in ("eligible", "tradable", "benchmark", "cash_returns"):
                 setattr(self, name, np.load(staging / (name + ".npy")))
             for name in ("returns", "cash_settlements", "assumed_exits"):
