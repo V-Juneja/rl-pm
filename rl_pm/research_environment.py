@@ -54,6 +54,7 @@ class ResearchPortfolio(Portfolio):
         targets[locked] = self.weights[locked]
         targets[indices] = (free - fee) * action[:-1]
         cash = (free - fee) * action[-1]
+        cash_target = cash
         used = targets > 0
         returns = self.market.returns[t]
         if not np.isfinite(returns[used]).all():
@@ -75,7 +76,7 @@ class ResearchPortfolio(Portfolio):
         self.cash = cash / growth if growth > 0 else 0.0
         self.position += 1
         done = growth <= 0 or self.position >= self.right
-        return float(np.log(max(growth, 1e-12))), done, {
+        info = {
             "date": str(self.market.dates[t]), "return": growth - 1,
             "benchmark_return": float(self.market.benchmark[t]),
             "turnover": turnover, "cost_fraction": fee, "equity": self.equity,
@@ -83,3 +84,37 @@ class ResearchPortfolio(Portfolio):
             "locked_weight": fixed, "assumed_exit_weight": assumed_exposure,
             "assumed_exit_capital": old_equity * assumed_exposure,
         }
+        if getattr(self, "capture_attribution", False):
+            rows = []
+            for n in np.flatnonzero(targets > 0):
+                contribution = float(targets[n] * returns[n])
+                rows.append({
+                    "security_id": str(self.market.ids[n]),
+                    "date": info["date"],
+                    "weight": float(targets[n]),
+                    "security_return": float(returns[n]),
+                    "capital_contribution": old_equity * contribution,
+                    "assumed_terminal": bool(self.market.assumed_exits[t, n]),
+                })
+            rows.append({
+                "security_id": "CASH",
+                "date": info["date"],
+                "weight": float(cash_target),
+                "security_return": float(self.market.cash_returns[t]),
+                "capital_contribution": (
+                    old_equity
+                    * cash_target
+                    * float(self.market.cash_returns[t])
+                ),
+                "assumed_terminal": False,
+            })
+            rows.append({
+                "security_id": "TRADING_COSTS",
+                "date": info["date"],
+                "weight": 0.0,
+                "security_return": 0.0,
+                "capital_contribution": -old_equity * fee,
+                "assumed_terminal": False,
+            })
+            info["attribution"] = rows
+        return float(np.log(max(growth, 1e-12))), done, info

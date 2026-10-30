@@ -12,7 +12,11 @@ import torch
 from torch import nn
 from torch.distributions import Dirichlet
 
-from .cross_sectional import augment_features, extra_feature_count
+from .cross_sectional import (
+    RANK_FEATURES,
+    augment_features,
+    extra_feature_count,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -608,14 +612,24 @@ def performance(rows):
     }
 
 
-def evaluate(model, market, normalizer, bounds, config, policy):
+def evaluate(
+    model,
+    market,
+    normalizer,
+    bounds,
+    config,
+    policy,
+    collect_attribution=False,
+):
     environment = getattr(market, "environment_class", Portfolio)(
         market,
         normalizer,
         *bounds,
         config.cost_bps,
     )
+    environment.capture_attribution = collect_attribution
     rows = []
+    attribution = {}
 
     while True:
         observation = environment.observation()
@@ -639,23 +653,79 @@ def evaluate(model, market, normalizer, bounds, config, policy):
             allocation[-1] = 1
 
         _, done, info = environment.step(indices, allocation)
+        for item in info.pop("attribution", []):
+            security_id = item["security_id"]
+            row = attribution.setdefault(security_id, {
+                "security_id": security_id,
+                "sessions_held": 0,
+                "exposure_days": 0.0,
+                "capital_contribution": 0.0,
+                "best_daily_contribution": 0.0,
+                "best_date": "",
+                "worst_daily_contribution": 0.0,
+                "worst_date": "",
+                "assumed_terminal_sessions": 0,
+                "assumed_terminal_contribution": 0.0,
+            })
+            contribution = float(item["capital_contribution"])
+            weight = float(item["weight"])
+            row["sessions_held"] += int(
+                weight > 0
+                and security_id not in {"CASH", "TRADING_COSTS"}
+            )
+            row["exposure_days"] += weight
+            row["capital_contribution"] += contribution
+            if contribution > row["best_daily_contribution"]:
+                row["best_daily_contribution"] = contribution
+                row["best_date"] = item["date"]
+            if contribution < row["worst_daily_contribution"]:
+                row["worst_daily_contribution"] = contribution
+                row["worst_date"] = item["date"]
+            if item["assumed_terminal"]:
+                row["assumed_terminal_sessions"] += 1
+                row["assumed_terminal_contribution"] += contribution
         rows.append(info)
 
         if done:
             break
 
-    return rows
+    return (rows, list(attribution.values())) if collect_attribution else rows
 
 
 def evaluate_all(model, market, normalizer, bounds, config, output):
     summaries = {}
 
+    attribution = []
     for policy in ("agent", "equal_weight", "cash"):
-        rows = evaluate(
-            model, market, normalizer, bounds, config, policy
+        result = evaluate(
+            model,
+            market,
+            normalizer,
+            bounds,
+            config,
+            policy,
+            collect_attribution=(policy == "agent"),
         )
+        if policy == "agent":
+            rows, attribution = result
+        else:
+            rows = result
         write_rows(output / f"{policy}.csv", rows)
         summaries[policy] = performance(rows)
+
+    components = [
+        row for row in attribution
+        if row["security_id"] in {"CASH", "TRADING_COSTS"}
+    ]
+    securities = [
+        row for row in attribution
+        if row["security_id"] not in {"CASH", "TRADING_COSTS"}
+    ]
+    securities.sort(key=lambda row: row["capital_contribution"])
+    write_rows(output / "agent-attribution-all.csv", attribution)
+    write_rows(output / "agent-attribution-worst.csv", securities[:25])
+    write_rows(output / "agent-attribution-best.csv", securities[-25:][::-1])
+    write_rows(output / "agent-attribution-components.csv", components)
 
     left, right = bounds
     benchmark_rows = [
@@ -801,10 +871,7 @@ def train(args, market):
                 "agent",
             )
             metrics = performance(rows)
-            score = (
-                metrics["total_return"]
-                - metrics["max_drawdown"]
-            )
+            score = metrics["total_return"] - metrics["max_drawdown"]
             report["validation"] = metrics
 
             if score > best_score:
