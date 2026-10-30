@@ -145,6 +145,23 @@ confidence labels as verification. Downloaded records and evidence copies remain
 under `data/external/`; review reports remain under `outputs/`.
 
 ## Run
+
+Research training can run before the independent data audit is complete:
+
+```sh
+.venv/bin/python -m rl_pm.research prepare
+.venv/bin/python -m rl_pm.research train --updates 50
+```
+
+This separate research scenario defaults to zero recovery on unresolved final
+exits. Temporary gaps retain the last observed valuation and lock the position
+until trading resumes. Known cash consideration uses an explicit assumption
+about payment timing and the provider's price basis. These assumptions are
+saved with the dataset, checkpoints and run metadata; the verified-data trainer
+keeps its existing checks. The cash policy uses a separate Beta allocation so
+cash exposure does not vanish as the stock universe grows. Model selection
+uses validation years; the final test period requires a separate command.
+
 Python 3.10+; standard library only for the initial prototype.
 
 ```sh

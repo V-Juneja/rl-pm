@@ -599,7 +599,7 @@ def performance(rows):
 
 
 def evaluate(model, market, normalizer, bounds, config, policy):
-    environment = Portfolio(
+    environment = getattr(market, "environment_class", Portfolio)(
         market,
         normalizer,
         *bounds,
@@ -619,10 +619,11 @@ def evaluate(model, market, normalizer, bounds, config, policy):
                 )
             allocation = action.numpy()
         elif policy == "equal_weight" and len(indices):
-            allocation = np.concatenate([
-                np.full(len(indices), 1 / len(indices)),
-                [0.0],
-            ])
+            active = market.eligible[environment.position, indices].astype(float)
+            if active.sum():
+                allocation = np.concatenate([active / active.sum(), [0.0]])
+            else:
+                allocation = np.concatenate([active, [1.0]])
         else:
             allocation = np.zeros(len(indices) + 1)
             allocation[-1] = 1
@@ -672,6 +673,8 @@ def save_checkpoint(path, model, normalizer, market, config, splits):
         "scale": normalizer.scale.tolist(),
         "dataset_sha256": market.digest,
         "splits": splits,
+        "research_assumptions": market.metadata.get("research_assumptions"),
+        "model_architecture": getattr(market, "model_architecture", "dirichlet-v1"),
     }, temporary)
 
     temporary.replace(path)
@@ -682,6 +685,9 @@ def train(args, market):
         seed=args.seed,
         updates=args.updates,
         cost_bps=args.cost_bps,
+        episode_steps=getattr(args, "episode_steps", 252),
+        epochs=getattr(args, "epochs", 4),
+        learning_rate=getattr(args, "learning_rate", 0.0003),
     )
     seed_everything(config.seed)
 
@@ -713,7 +719,7 @@ def train(args, market):
         raise ValueError("Training period needs at least 252 rows")
 
     normalizer = Normalizer.fit(market, training)
-    model = ActorCritic(
+    model = getattr(market, "model_class", ActorCritic)(
         market.features.shape[-1] + 3,
         config.hidden,
     )
@@ -733,6 +739,8 @@ def train(args, market):
         "dataset_sha256": market.digest,
         "config": asdict(config),
         "splits": splits,
+        "research_assumptions": market.metadata.get("research_assumptions"),
+        "model_architecture": getattr(market, "model_architecture", "dirichlet-v1"),
     })
 
     best_score = -float("inf")
@@ -742,7 +750,7 @@ def train(args, market):
             training[0],
             training[1] - config.episode_steps,
         )
-        environment = Portfolio(
+        environment = getattr(market, "environment_class", Portfolio)(
             market,
             normalizer,
             left,
@@ -844,7 +852,7 @@ def test(args, market):
         checkpoint["mean"],
         checkpoint["scale"],
     )
-    model = ActorCritic(
+    model = getattr(market, "model_class", ActorCritic)(
         market.features.shape[-1] + 3,
         config.hidden,
     )

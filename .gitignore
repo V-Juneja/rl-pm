@@ -16,4 +16,6 @@ data/scraped/
 data/download-log.txt
 data/coverage-report.json
 outputs/
+data/processed/
+runs/
 *.egg-info/
