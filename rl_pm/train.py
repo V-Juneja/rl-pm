@@ -648,6 +648,32 @@ def evaluate(
                 allocation = np.concatenate([active / active.sum(), [0.0]])
             else:
                 allocation = np.concatenate([active, [1.0]])
+        elif policy.startswith("momentum_top_") and len(indices):
+            top_count = int(policy.rsplit("_", 1)[1])
+            raw = market.features[environment.position]
+            ranked = augment_features(
+                raw,
+                market.eligible[environment.position],
+                environment.weights > 0,
+            )
+            rank_start = market.features.shape[-1]
+            scores = (
+                0.20 * ranked[indices, rank_start]
+                + 0.30 * ranked[indices, rank_start + 1]
+                + 0.40 * ranked[indices, rank_start + 2]
+                + 0.10 * (1 - ranked[indices, rank_start + 3])
+            )
+            scores[raw[indices, 18] <= 0] = -np.inf
+            weights = np.zeros(len(indices), dtype=np.float64)
+            candidates = np.flatnonzero(np.isfinite(scores))
+            if len(candidates):
+                chosen = candidates[
+                    np.argsort(scores[candidates], kind="stable")[-top_count:]
+                ]
+                weights[chosen] = 1 / len(chosen)
+                allocation = np.concatenate([weights, [0.0]])
+            else:
+                allocation = np.concatenate([weights, [1.0]])
         else:
             allocation = np.zeros(len(indices) + 1)
             allocation[-1] = 1
@@ -696,7 +722,11 @@ def evaluate_all(model, market, normalizer, bounds, config, output):
     summaries = {}
 
     attribution = []
-    for policy in ("agent", "equal_weight", "cash"):
+    policies = (
+        "agent", "equal_weight", "cash",
+        "momentum_top_50", "momentum_top_100", "momentum_top_200",
+    )
+    for policy in policies:
         result = evaluate(
             model,
             market,
