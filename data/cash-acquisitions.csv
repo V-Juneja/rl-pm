@@ -1,0 +1,7 @@
+security_id,effective_date,cash_per_share,source_url,settlement_date_verified
+ALTR-201512,2015-12-28,54.00,https://www.sec.gov/Archives/edgar/data/50863/000005086316000105/a10kdocument12262015q4.htm,false
+SPLS-201709,2017-09-12,10.25,https://www.sec.gov/Archives/edgar/data/791519/000110465917056727/a17-21547_28k.htm,false
+RHT,2019-07-09,190.00,https://www.sec.gov/Archives/edgar/data/1087423/000095014219001516/eh1900894_8k-rh.htm,false
+CERN,2022-06-08,95.00,https://www.sec.gov/Archives/edgar/data/1341439/000119312522169835/d290344d8k.htm,false
+TWTR,2022-10-27,54.20,https://www.sec.gov/Archives/edgar/data/1418091/000119312522272772/d411753d8k.htm,false
+ATVI,2023-10-13,95.00,https://www.sec.gov/Archives/edgar/data/789019/000119312523255762/d537928d8k.htm,false

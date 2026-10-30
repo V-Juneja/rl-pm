@@ -1,0 +1,23 @@
+{
+  "commit": "6738888cc01c5f78aba3a5fe24e85d8446ea0b19",
+  "files": {
+    "series_end.csv": {
+      "url": "https://raw.githubusercontent.com/Johnbrick123/sp500-data/6738888cc01c5f78aba3a5fe24e85d8446ea0b19/series_end.csv",
+      "sha256": "3f62c3ecb434243883ffdf4749308258fa08c2a2a106f4615835a03d3c1a967b"
+    },
+    "corporate_action_overrides.csv": {
+      "url": "https://raw.githubusercontent.com/Johnbrick123/sp500-data/6738888cc01c5f78aba3a5fe24e85d8446ea0b19/corporate_action_overrides.csv",
+      "sha256": "ebed89ded2ff749133447f910fe9e4e75b27922e760cc1e6c49a6397f44017c5"
+    },
+    "dropped_placeholders.csv": {
+      "url": "https://github.com/Johnbrick123/sp500-data/releases/download/data/dropped_placeholders.csv",
+      "sha256": "044bc9a8c41f340db80bfc7170962f2ffac7eddddae4b772ede2e29699db60a1",
+      "release_digest": "sha256:044bc9a8c41f340db80bfc7170962f2ffac7eddddae4b772ede2e29699db60a1"
+    },
+    "exit_gaps.csv": {
+      "url": "https://github.com/Johnbrick123/sp500-data/releases/download/data/exit_gaps.csv",
+      "sha256": "7fd978df63316793d0b9c7497ba13aa48789f71c02b2db919e884fb0f215364a",
+      "release_digest": "sha256:7fd978df63316793d0b9c7497ba13aa48789f71c02b2db919e884fb0f215364a"
+    }
+  }
+}

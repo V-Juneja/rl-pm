@@ -55,9 +55,54 @@ must be aligned to a later execution boundary by the dataset builder.
 .venv/bin/python -m rl_pm.features --tickers AAPL MSFT AMZN
 ```
 
-This preview command uses the project's local combined CSV store. The training
-dataset builder still needs to align features, eligibility, tradability, and
-forward returns, including terminal corporate actions.
+This preview command uses the project's local combined CSV store.
+
+## Prepare training inputs
+
+```sh
+.venv/bin/python scripts/fetch_terminal_reference.py
+.venv/bin/python -m rl_pm.build_dataset
+```
+
+The builder verifies the source hashes and writes NumPy arrays plus an audit
+manifest to `outputs/training-staging/`. Use `--output` to choose a new directory
+when rebuilding; existing results are never overwritten. Prices after index
+removal remain available. Missing quotes and returns remain missing.
+
+For an execution dated t, features and membership eligibility come from t−1.
+The candidate execution is at t's close, with the return measured through the
+next session's close. The observed execution quote determines the candidate
+tradability flag; future return availability never determines that flag.
+Cash earns zero interest in this research staging representation.
+
+`missing-forward-returns.csv` lists buyable observations without a next-session
+return. `history-endpoints.csv` lists histories ending before the final session
+for terminal-outcome review. Neither report treats a missing quote as a zero
+return or a bankruptcy. The staging directory is not an approved training NPZ:
+identity, membership timing, execution feasibility, halts, and terminal corporate
+actions still require verification. The existing trainer continues to require
+its audited dataset contract.
+
+## Terminal-event review
+
+```sh
+.venv/bin/python -m rl_pm.build_dataset --output outputs/training-staging-v2
+.venv/bin/python -m rl_pm.terminal_audit
+```
+
+The pinned reference files include source-reported suspensions extending past
+index removal. The builder excludes observations between each reported last
+trade and resumption, including unchanged SVB and Signature Bank quotes during
+their halts. A resumed multi-session loss is reported over the full gap; it is
+not inserted as a daily return or removed from the history.
+
+`outputs/terminal-audit/return-review.csv` classifies every buyable observation
+missing a forward return. `cash-entitlements.csv` records six cash acquisition
+terms with SEC sources. These are receivable candidates, not executable prices
+or spendable cash. Nominal-price basis and settlement timing still need review.
+Abiomed and other deals with contingent rights or stock consideration are not
+treated as simple cash exits. No training verification flags are enabled by this
+audit.
 
 ## Run
 Python 3.10+; standard library only for the initial prototype.
