@@ -1,0 +1,4 @@
+security_id,price_file,end_exclusive,source_url
+DPHIQ-200910,data/raw/combined/DPHIQ_combined_daily.csv,2009-10-06,https://www.sec.gov/divisions/corpfin/cf-noaction/2009/dphholdings111209-12h3-incoming.pdf
+MERQ-200611,data/raw/combined/MERQ_combined_daily.csv,2006-11-06,https://www.sec.gov/Archives/edgar/data/867058/000110465906071954/a06-23388_17s8pos.htm
+WAMUQ-201203,data/raw/combined/WAMUQ_combined_daily.csv,2012-03-19,https://www.sec.gov/Archives/edgar/data/933136/000090951812000115/mm03-1912_form15.htm

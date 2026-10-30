@@ -97,18 +97,58 @@ their halts. A resumed multi-session loss is reported over the full gap; it is
 not inserted as a daily return or removed from the history.
 
 `outputs/terminal-audit/return-review.csv` classifies every buyable observation
-missing a forward return. `cash-entitlements.csv` records six cash acquisition
-terms with SEC sources. These are receivable candidates, not executable prices
+missing a forward return. `cash-entitlements.csv` records cash acquisition
+terms with primary sources. These are receivable candidates, not executable prices
 or spendable cash. Nominal-price basis and settlement timing still need review.
 Abiomed and other deals with contingent rights or stock consideration are not
 treated as simple cash exits. No training verification flags are enabled by this
 audit.
 
+## Recover longer histories and terminal terms
+
+Some price histories end at exchange or index removal even though the same
+shares continued trading OTC. A file endpoint is not itself proof of a merger
+or cancellation. The first recovery pass restored 2,089 observations for Delphi,
+Mercury Interactive, and Washington Mutual from existing local archives. Each
+extension requires at least 20 overlapping quotes with a consistent adjustment
+scale, and stops before the documented cancellation or merger date. The
+original snapshot remains in place.
+
+```sh
+.venv/bin/python -m rl_pm.extend_histories
+.venv/bin/python -m rl_pm.build_dataset --source data/raw/final-extended --output outputs/training-staging-v3
+.venv/bin/python -m rl_pm.terminal_audit --source data/raw/final-extended --staging outputs/training-staging-v3 --output outputs/terminal-audit-v3
+.venv/bin/python -m rl_pm.compile_terminal_events
+.venv/bin/python -m rl_pm.recover_terminals --review outputs/terminal-audit-v3/return-review.csv --source data/raw/final-extended --output outputs/terminal-recovery-v3
+```
+
+The extended snapshot has 7,220,633 price observations. The event ledger contains
+28 cash terms, one stock conversion, and Delphi's cancellation without a
+distribution to old common shareholders, with primary-source links. Its
+terminal return is recorded at the 2009 cancellation, never at the 2005 index
+removal. Cash entitlements remain receivables until payment timing is verified.
+
+Of the 394 remaining buyable observations missing a next-session return, 27
+have verified cash terms, one has verified stock-conversion terms, three are
+reported suspensions, five are temporary gaps, and 358 still lack verified
+terminal terms. An additional public reference matches 168 of those 358, with
+dated security identifiers, payout formulas and review flags; these are
+candidates, not independently verified outcomes. 190 have no unique nearby
+event in that reference.
+
+The reference is
+[royelee/delist-detection](https://github.com/royelee/delist-detection), pinned
+to the downloaded commit and file hashes in
+`data/external/delist-detection/provenance.json`. This project does not run that
+repository's code or adopt its estimated zero returns, recovery assumptions, or
+confidence labels as verification. Downloaded records and evidence copies remain
+under `data/external/`; review reports remain under `outputs/`.
+
 ## Run
 Python 3.10+; standard library only for the initial prototype.
 
 ```sh
-python3 -m unittest discover -s tests -v
+.venv/bin/python -m unittest discover -s tests -v
 python3 scripts/fetch_membership.py
 python3 -m rl_pm.audit
 ```

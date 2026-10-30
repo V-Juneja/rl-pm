@@ -55,6 +55,7 @@ def audit(source, staging, reference, output):
     manifest = json.loads((staging / "manifest.json").read_text())
     gaps = read_rows(staging / "missing-forward-returns.csv")
     cash = {r["security_id"]: r for r in read_rows(ROOT / "data/cash-acquisitions.csv")}
+    stock = {r["security_id"]: r for r in read_rows(ROOT / "data/stock-acquisitions.csv")}
     intervals = suspension_intervals(reference / "exit_gaps.csv")
     c = duckdb.connect()
     c.read_parquet(str(source / "prices.parquet")).create_view("p")
@@ -91,6 +92,10 @@ def audit(source, staging, reference, output):
             cash_per_share = event["cash_per_share"]
             cumulative_return = cash_entitlement_return(float(cash_per_share), prior[0])
             source_url = event["source_url"]
+        stock_event = stock.get(sid)
+        if stock_event and day <= np.datetime64(stock_event["effective_date"]) <= next_day:
+            status = "stock_terms_verified_conversion_pending"
+            source_url = stock_event["source_url"]
         records.append({
             **gap, "status": status, "last_membership": str(last_member),
             "next_observed_quote": str(later[0][0]) if later else "",
