@@ -197,6 +197,31 @@ simulator fork and execution adapter also need independent review before the
 results are treated as research evidence. Background: the [ABIDES-Gym paper](https://arxiv.org/abs/2110.14771)
 and the pinned [ABIDES-NG source](https://github.com/GabrieleDiCorato/abides-ng).
 
+### Simulated intraday position management
+
+`rl_pm.intraday_trader` is a second task: a long-only Double DQN can buy one
+share, hold, or sell one share in a ten-minute simulated market, up to a
+five-share position limit. The state includes inventory, book imbalance,
+spread, recent price changes, and elapsed time. It is compared with cash,
+buy-and-hold, and a simple momentum rule on separate simulator seeds.
+
+```sh
+.venv/bin/python -m rl_pm.intraday_trader --episodes 200 --eval-episodes 30
+```
+
+Its checkpoint and outputs are saved under `outputs/intraday-dqn-001/`. This
+is a different decision problem from executing a parent order, but it shares
+the same synthetic market assumptions. Neither simulation answers whether a
+strategy can predict real stock returns.
+
+The larger-exposure sensitivity run uses ten-share actions and a 50-share
+limit:
+
+```sh
+.venv/bin/python -m rl_pm.intraday_trader --episodes 200 --eval-episodes 30 \
+  --position-limit 50 --order-size 10 --output outputs/intraday-scale-dqn-001
+```
+
 ### Optional point-in-time news inputs
 
 The research loader accepts `news-events.csv` and `news-coverage.csv` inside the
