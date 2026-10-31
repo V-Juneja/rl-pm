@@ -326,6 +326,43 @@ forecast/return correlation was 0.019. Forecast sizing returned 109.7% with
 forecasting edge or beat buy-and-hold. The run saves per-week forecasts, the
 summary, run settings, and a comparison chart in its output directory.
 
+### RL-adaptive StockAlgo ensemble weights
+
+`rl_pm.adaptive_ensemble_rl` contains an isolated local copy of the source
+ensemble's momentum, mean-reversion, value, volatility-regime, and trend signal
+math. The original file in the separate StockAlgo checkout is untouched. The
+portfolio signal threshold and long-only test behavior stay fixed; the RL
+policy changes only the component-weight selection. The source's current ML
+weight behavior is also preserved: its aggregator reads `knn_prediction`, but
+the KNN function returns `ml_signal`, leaving the weighted ML contribution at
+zero. The copied baseline score matches the earlier validated source formula.
+
+The default Double DQN selects among the source's three existing weight
+profiles each week based on trailing market/ensemble features and the previous
+exposure. Run it with:
+
+```sh
+.venv/bin/python -m rl_pm.adaptive_ensemble_rl --agent dqn --episodes 250 \
+  --output outputs/adaptive-ensemble-dqn-001
+```
+
+The same module also supports PPO, which emits continuous Dirichlet weights
+over the four source components:
+
+```sh
+.venv/bin/python -m rl_pm.adaptive_ensemble_rl --agent ppo --episodes 250 \
+  --output outputs/adaptive-ensemble-ppo-001
+```
+
+On the 2019–2026 SPY test, discrete DQN weights returned 105.4% (9.67% CAGR,
+0.711 Sharpe, 26.51% maximum drawdown), compared with 91.3% for fixed balanced
+weights and 130.4% for StockAlgo's original regime rule. PPO returned 109.0%;
+its mean weights stayed close to balanced. DQN improved on the balanced
+baseline, but neither RL run beat the unchanged source rule. This experiment
+isolates weight adaptation on SPY; it is not yet a full-universe constituent
+portfolio backtest. Results, selected weights, and plots are written to each
+run's output directory.
+
 ### Optional point-in-time news inputs
 
 The research loader accepts `news-events.csv` and `news-coverage.csv` inside the
