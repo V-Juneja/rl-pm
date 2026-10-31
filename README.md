@@ -222,6 +222,43 @@ limit:
   --position-limit 50 --order-size 10 --output outputs/intraday-scale-dqn-001
 ```
 
+The same size and training seed can be evaluated under the alternate `rmsc03`
+market mix:
+
+```sh
+.venv/bin/python -m rl_pm.intraday_trader --episodes 200 --eval-episodes 30 \
+  --position-limit 50 --order-size 10 --background-config rmsc03 \
+  --output outputs/rmsc03-intraday-dqn-001
+```
+
+### Historical S&P 500 exposure control
+
+`rl_pm.index_exposure_rl` asks a narrower historical question using SPY adjusted
+prices as a broad S&P 500 total-return proxy: can a Double DQN switch between
+0%, 50%, and 100% exposure using only trailing returns, volatility, drawdown,
+and trend? The policy observes through close t and earns the next session's
+return. It trains on 1996–2012, reports 2013–2018 validation, and holds out
+2019 onward for a final test. Five basis points per unit turnover are charged.
+
+```sh
+.venv/bin/python -m rl_pm.index_exposure_rl --episodes 250
+```
+
+Outputs go to `outputs/index-exposure-dqn-001/`. The comparison includes fixed
+cash, 50% and 100% exposure, a 200-day trend filter, and 10% volatility
+targeting. This uses the S&P market proxy rather than historical constituent
+selection; it is a distinct risk-control experiment, not an estimate of a
+constituent-picking strategy. Cash earns zero, and one historical holdout does
+not establish a reliable edge.
+
+Recorded 2019–2026 holdout: the first DQN seed returned 90.3% (8.60% CAGR,
+17.6% max drawdown) versus 244.8% for buy-and-hold (17.20% CAGR, 33.7% max
+drawdown). Fixed 50% exposure returned 92.5% with 18.0% max drawdown, while
+the simple volatility-target rule returned 123.3% with 12.7% max drawdown.
+A second training seed returned 56.8% (5.94% CAGR, 22.4% max drawdown). The
+agent traded far more often than the simple rules. On these runs, RL did not
+add value over the simpler risk controls.
+
 ### Optional point-in-time news inputs
 
 The research loader accepts `news-events.csv` and `news-coverage.csv` inside the

@@ -18,9 +18,9 @@ from rl_pm.abides_execution import load_daily_investor_source
 from rl_pm.execution_train import QNetwork
 
 
-def make_env(env_class, order_size):
+def make_env(env_class, order_size, background_config):
     return env_class(
-        background_config="rmsc04",
+        background_config=background_config,
         mkt_close="09:40:00",
         timestep_duration="60s",
         starting_cash=10_000_000,
@@ -59,12 +59,14 @@ def select_action(network, state, holdings, epsilon, rng, position_limit, order_
     return max(valid, key=lambda action: float(q_values[action]))
 
 
-def train(env_class, episodes, seed, output_dir, position_limit, order_size):
+def train(
+    env_class, episodes, seed, output_dir, position_limit, order_size, background_config
+):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     rng = random.Random(seed)
-    env = make_env(env_class, order_size)
+    env = make_env(env_class, order_size, background_config)
     network = QNetwork(int(np.prod(env.observation_space.shape)))
     target = QNetwork(int(np.prod(env.observation_space.shape)))
     target.load_state_dict(network.state_dict())
@@ -258,6 +260,7 @@ def main():
     parser.add_argument("--seed", type=int, default=20261031)
     parser.add_argument("--position-limit", type=int, default=5)
     parser.add_argument("--order-size", type=int, default=1)
+    parser.add_argument("--background-config", choices=("rmsc03", "rmsc04"), default="rmsc04")
     parser.add_argument("--output", type=Path, default=Path("outputs/intraday-dqn-001"))
     args = parser.parse_args()
     if min(args.episodes, args.eval_episodes, args.position_limit, args.order_size) < 1:
@@ -267,9 +270,15 @@ def main():
 
     env_class = load_daily_investor_source()
     network, history = train(
-        env_class, args.episodes, args.seed, args.output, args.position_limit, args.order_size
+        env_class,
+        args.episodes,
+        args.seed,
+        args.output,
+        args.position_limit,
+        args.order_size,
+        args.background_config,
     )
-    env = make_env(env_class, args.order_size)
+    env = make_env(env_class, args.order_size, args.background_config)
     eval_seeds = [args.seed + 1_000_000 + index for index in range(args.eval_episodes)]
     rows = []
     for policy in ("dqn", "buy_hold", "momentum", "cash"):
@@ -295,6 +304,7 @@ def main():
         "action": f"buy {args.order_size} shares, hold, or sell {args.order_size} shares",
         "position_limit_shares": args.position_limit,
         "market_window": "09:30-09:40 simulated time",
+        "background_config": args.background_config,
         "simulator": "ABIDES-NG",
         "simulator_revision": "ac7a2a7bf6e406cd2bbed887e22c5a5a790bb242",
         "price_source": "simulated",
