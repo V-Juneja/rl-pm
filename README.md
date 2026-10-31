@@ -363,6 +363,32 @@ isolates weight adaptation on SPY; it is not yet a full-universe constituent
 portfolio backtest. Results, selected weights, and plots are written to each
 run's output directory.
 
+The follow-up `rl_pm.adaptive_ensemble_universe` evaluates those copied signals
+across the historical constituent price panel. The original signal threshold,
+BUY/HOLD/SELL interpretation, per-stock position cap, and commission are held
+constant; only the weight-profile decision changes. It supports a global DQN
+profile each week and a shared per-security DQN that chooses a profile for each
+eligible stock.
+
+```sh
+.venv/bin/python -m rl_pm.adaptive_ensemble_universe --agent global \
+  --episodes 250 --output outputs/adaptive-ensemble-universe-dqn-001
+.venv/bin/python -m rl_pm.adaptive_ensemble_universe --agent per_security \
+  --episodes 250 --output outputs/adaptive-ensemble-universe-per-security-dqn-001 \
+  --cache-dir outputs/adaptive-ensemble-universe-dqn-001/signal_cache
+```
+
+On the 2019–2026 held-out constituent-panel run, global RL returned 121.6%
+(10.77% CAGR, 0.667 Sharpe, 33.79% maximum drawdown); the copied original rule
+returned 125.0% (10.99% CAGR, 0.664 Sharpe, 34.66% drawdown), and fixed balanced
+weights returned 115.8%. The per-security RL version returned 109.0%. Global
+RL only slightly improved the original rule's drawdown and Sharpe while
+returning less; per-security RL underperformed both. Neither result is a clear
+improvement. The historical panel is still a research stress scenario: 563
+unresolved terminal exits assume zero recovery, and membership/terminal records
+are not fully verified. See each run's `run.json` for the complete assumptions,
+chosen profile frequencies, and files.
+
 ### Optional point-in-time news inputs
 
 The research loader accepts `news-events.csv` and `news-coverage.csv` inside the
