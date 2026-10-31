@@ -103,7 +103,7 @@ def make_state(features, exposure):
     return np.concatenate((features, np.asarray([exposure], dtype=np.float32)))
 
 
-def train(features, returns, train_bounds, episodes, seed, output):
+def train(features, returns, train_bounds, episodes, seed, output, interval: int = 1):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -117,15 +117,20 @@ def train(features, returns, train_bounds, episodes, seed, output):
     epsilon = 1.0
     history = []
     total_steps = 0
-    max_length = min(252, right - left - 1)
-    min_length = min(63, max_length)
+    if interval < 1:
+        raise ValueError("decision interval must be positive")
+    max_steps = min(252 // interval, (right - left - 1) // interval)
+    min_steps = min(max(1, int(np.ceil(63 / interval))), max_steps)
 
     for episode in range(episodes):
-        length = rng.randint(min_length, max_length)
+        length_steps = rng.randint(min_steps, max_steps)
+        length = length_steps * interval
         start = rng.randint(left, right - length - 1)
         exposure = 0.0
         episode_reward = 0.0
-        for index in range(start, start + length):
+        for step in range(length_steps):
+            index = start + step * interval
+            next_index = index + interval
             state = make_state(features[index], exposure)
             if rng.random() < epsilon:
                 action_index = rng.randrange(len(ACTIONS))
@@ -134,12 +139,15 @@ def train(features, returns, train_bounds, episodes, seed, output):
                     q_values = network(torch.tensor(state).unsqueeze(0))
                 action_index = int(q_values.argmax(dim=1).item())
             target_exposure = float(ACTIONS[action_index])
-            net_return = target_exposure * returns[index + 1] - 0.0005 * abs(
-                target_exposure - exposure
+            period_return = np.prod(
+                1.0 + target_exposure * returns[index + 1 : next_index + 1]
+            ) - 1.0
+            net_growth = (1.0 + period_return) * max(
+                1e-8, 1.0 - 0.0005 * abs(target_exposure - exposure)
             )
-            reward = float(np.log(max(1e-8, 1.0 + net_return))) * 100.0
-            next_state = make_state(features[index + 1], target_exposure)
-            done = index + 1 >= start + length
+            reward = float(np.log(max(1e-8, net_growth))) * 100.0
+            next_state = make_state(features[next_index], target_exposure)
+            done = step + 1 >= length_steps
             replay.append((state, action_index, reward, next_state, done))
             episode_reward += reward
             exposure = target_exposure

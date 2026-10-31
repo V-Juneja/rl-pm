@@ -259,6 +259,51 @@ A second training seed returned 56.8% (5.94% CAGR, 22.4% max drawdown). The
 agent traded far more often than the simple rules. On these runs, RL did not
 add value over the simpler risk controls.
 
+### Meta-policy over StockAlgo signals
+
+`rl_pm.ensemble_meta_rl` tests whether RL can choose market exposure using a
+reconstructed StockAlgo technical score, its component factors, broad SPY
+trend/volatility features, and a causal five-neighbor next-session direction
+signal. The action is 0%, 50%, or 100% SPY exposure, chosen every five trading
+sessions. Features are known at close t; reward comes from the following five
+sessions. The historical StockAlgo signal formulas were checked against the
+source implementation on four dates. The source currently contributes zero
+from its KNN field because it reads a different output key than the KNN method
+returns; this run preserves that base-score behavior and adds its own causal KNN
+feature separately.
+
+```sh
+.venv/bin/python -m rl_pm.ensemble_meta_rl --episodes 250 \
+  --output outputs/ensemble-meta-weekly-dqn-001
+```
+
+The run trains on 1996–2012, reports 2013–2018 validation, and keeps 2019 onward
+as the held-out test. It writes `weekly_results.csv`, `features.csv`,
+`training.csv`, `summary.json`, `run.json`, a checkpoint, and
+`meta_exposure_test.png` under the output directory. The run used one seed and
+5 bps per unit of exposure turnover. Cash earns zero and no interest, taxes, or
+slippage beyond that turnover charge are modeled.
+
+In the saved 2019–2026 test, the DQN returned 125.9% (11.02% CAGR, 0.923
+zero-rate Sharpe, 15.25% maximum drawdown), compared with SPY buy-and-hold at
+244.8% (17.20% CAGR, 0.967 Sharpe, 28.72% drawdown). The learned policy reduced
+drawdown but did not beat buy-and-hold on return or Sharpe. A fixed StockAlgo
+score rule returned 130.4%; scaling exposure linearly by the score returned
+142.1%. Adding the causal KNN to the fixed score rule did well in validation
+(131.5% total return) but not in test (108.3%), so that simple blend did not
+generalize. The DQN turned over about 20.9 units of exposure per year, so its
+result is especially sensitive to execution costs. These results support a
+risk-control experiment, not a claim of market prediction or market-beating
+performance.
+
+The public trade-email history in the local StockAlgo checkout covers roughly
+one year, too little to train a long-horizon policy or replay it across the SPY
+test. The run therefore reconstructs the ensemble's technical formula on SPY;
+it does not consume email picks or their individual stock returns. A proper
+email-signal meta-learner needs longer point-in-time predictions with timestamps
+and forward outcomes. Multiple training seeds and additional market regimes
+also need evaluation before drawing conclusions about the DQN.
+
 ### Optional point-in-time news inputs
 
 The research loader accepts `news-events.csv` and `news-coverage.csv` inside the
