@@ -304,6 +304,28 @@ email-signal meta-learner needs longer point-in-time predictions with timestamps
 and forward outcomes. Multiple training seeds and additional market regimes
 also need evaluation before drawing conclusions about the DQN.
 
+### Walk-forward return forecast
+
+`rl_pm.walkforward_forecast` tests a different meta-learning approach: expanding
+window ridge regression predicts SPY's next-five-session return from its
+trailing indicators and reconstructed StockAlgo ensemble factors. It refits
+every 21 sessions and trains only on labels whose full five-session outcome is
+already known at that date. Forecasts are converted to 0–100% exposure with a
+fixed linear map; the mapping is not tuned on the test period.
+
+```sh
+.venv/bin/python -m rl_pm.walkforward_forecast \
+  --output outputs/walkforward-forecast-ensemble-001
+```
+
+This was not a successful return predictor. On the 2019–2026 test, its direction
+accuracy was 54.2%, below the simple always-positive baseline of 61.3%, and
+forecast/return correlation was 0.019. Forecast sizing returned 109.7% with
+17.6% max drawdown and 3.5 annual exposure turnover, against SPY's 244.8%,
+28.7% drawdown, and 0.13 turnover. It reduced exposure risk, but did not add
+forecasting edge or beat buy-and-hold. The run saves per-week forecasts, the
+summary, run settings, and a comparison chart in its output directory.
+
 ### Optional point-in-time news inputs
 
 The research loader accepts `news-events.csv` and `news-coverage.csv` inside the
